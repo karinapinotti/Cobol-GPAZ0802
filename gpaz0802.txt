@@ -1,0 +1,245 @@
+      *--------------------------------------------------------------*
+      *                                                              *
+      * OBJETIVO: CALCULAR A SIMULACAO DE EMPRESTIMOS FORNECIDOS     *
+      *         VIA SYSIN E EXIBIR RESULTADOS FORMATADOS NA SYSOUT   *
+      *                                                              *
+      *--------------------------------------------------------------*
+
+      *--------------------------------------------------------------*
+       IDENTIFICATION                      DIVISION.
+      *--------------------------------------------------------------*
+       PROGRAM-ID.                         GPAZ0802.
+       AUTHOR.                             KARINA.
+       DATE-WRITTEN.                       10/09/2020.
+       DATE-COMPILED.                      11/09/2020.
+       SECURITY.                           NENHUMA.
+      *--------------------------------------------------------------*
+       ENVIRONMENT                         DIVISION.
+      *--------------------------------------------------------------*
+       CONFIGURATION                       SECTION.
+       SOURCE-COMPUTER.                    NOTEKARINA.
+       OBJECT-COMPUTER.                    HERCULES01.
+       SPECIAL-NAMES.
+           DECIMAL-POINT IS COMMA.
+      *
+       INPUT-OUTPUT                        SECTION.
+      *    ESTA SECTION FICARA VAZIA POIS NAO UTILIZAMOS ARQUIVOS    *
+      *--------------------------------------------------------------*
+       DATA                                DIVISION.
+      *--------------------------------------------------------------*
+       FILE                                SECTION.
+      *    ESSA SECTION FICARA VAZIA POIS NAO UTILIZAMOS ARQUIVOS    *
+      *
+       WORKING-STORAGE                     SECTION.
+      *
+      * DECLARANDO AS VARIAVEIS DE TEMPO
+      *==> VARIAVEI PARA RECEBER O HORARIO DE INICIO DO PROCESSAMENTO
+       01  WS-HORARIO-INICIAL.
+           05 WS-HORA-I                    PIC 9(02).
+           05 WS-MIN-I                     PIC 9(02).
+           05 WS-SEG-I                     PIC 9(02).
+           05 WS-CENT-I                    PIC 9(02).
+      *==> VARIAVEL PARA RECEBER O HORARIO DE TERMINO DO PROCESSAMENTO
+       01  WS-HORARIO-FINAL.
+           05 WS-HORA-F                    PIC 9(02).
+           05 WS-MIN-F                     PIC 9(02).
+           05 WS-SEG-F                     PIC 9(02).
+           05 WS-CENT-F                    PIC 9(02).
+      *==> VARIAVEL PARA ARMAZENAR A DIFERENCA ENTRE HORARIO DE INICIO
+      *     E DE TERMINO DO PROCESSAMENTO EM CENTESIMOS DE SEGUNDOS
+       77  WS-DIFERENCA                    PIC 9(7).
+      *==> VARIAVEL PARA RECEBER O TEMPO DO PROCESSAMENTO SEM FORMATACAO
+       01  WS-TEMPO-PROCESSAMENTO.
+           05 WS-HORA-P                    PIC 9(02).
+           05 WS-MIN-P                     PIC 9(02).
+           05 WS-SEG-P                     PIC 9(02).
+           05 WS-CENT-P                    PIC 9(02).
+      *==> VARIAVEL PARA RECEBER O TEMPO DO PROCESSAMENTO COM FORMATACAO
+       01  WS-TEMPO-PROCESSAMENTO-F.
+           05 WS-HORA-PF                   PIC 99.
+           05 FILLER                       PIC X(1)
+                                                   VALUE ":".
+           05 WS-MIN-PF                    PIC 99.
+           05 FILLER                       PIC X(1)
+                                                   VALUE ":".
+           05 WS-SEG-PF                    PIC 99.
+           05 FILLER                       PIC X(1)
+                                                   VALUE ":".
+           05 WS-CENT-PF                   PIC 99.
+      *
+      * DECLARACAO DE VARIAVEIS DE DATA
+      *==> VARIAVEL PARA RECEBER A DATA DO SISTEMA
+       01  WS-DATA-SISTEMA.
+           05 WS-ANO                       PIC 9(02).
+           05 WS-MES                       PIC 9(02).
+           05 WS-DIA                       PIC 9(02).
+       01  WS-DATA-JUL.
+           05 WS-ANO-J                     PIC 9(02).
+           05 WS-DIA-J                     PIC 9(03).
+      *
+       01  WS-DATA-SISTEMA-F.
+           05 WS-DIA                       PIC 9(02).
+           05 FILLER                       PIC X(01)
+                                                   VALUE "/".
+           05 WS-MES                       PIC 9(02).
+           05 FILLER                       PIC X(01)
+                                                   VALUE "/".
+           05 WS-ANO                       PIC 9(02).
+      *
+       77  WS-MES-EXT                      PIC X(09).
+       77  WS-DIA-SEMANA                   PIC 9.
+       77  WS-DIA-SEMANA-F                 PIC X(13).
+      *--------------------------------------------------------------*
+       01  WS-REG-SYSIN.
+           05 WS-NUM-SIMULACAO             PIC 9999.
+           05 WS-VAL-EMPRESTIMO            PIC 9(06)V99.
+           05 WS-JUROS                     PIC 9(02)V99.
+           05 WS-QTD-PARCELAS              PIC 99.
+       77  WS-VAL-PARC                     PIC 9(07)V99.
+       77  WS-VAL-TOTAL                    PIC 9(08)V99.
+       77  WS-CTLIDO                       PIC 9(04) COMP.
+       77  WS-CTPROC                       PIC 9(04) COMP.
+      *DECLARANDO AS VARIAVEIS FORMATADAS
+       77 WS-NUM-SIMULACAO-F               PIC 9999.
+       77 WS-VAL-EMPRESTIMO-F              PIC ZZZ.ZZ9,99.
+       77 WS-JUROS-F                       PIC Z9,99.
+       77 WS-QTD-PARCELAS-F                PIC Z9.
+       77 WS-VAL-PARC-F                    PIC ZZZ.ZZ9,99.
+       77 WS-VAL-TOTAL-F                   PIC Z.ZZZ.ZZ9,99.
+       77 WS-CTLIDO-F                      PIC ZZZ9.
+       77 WS-CTPROC-F                      PIC ZZZ9.
+      *
+       LINKAGE                             SECTION.
+      * ESSA SECTION FICARA VAZIA POIS NAO RECEBE DADOS DE OUTROS PROG
+      *--------------------------------------------------------------*
+       PROCEDURE                           DIVISION.
+      *--------------------------------------------------------------*
+       0000-GPAZ0801.
+           PERFORM 1000-INICIALIZAR
+           PERFORM 2000-PROCESSAR
+                   UNTIL WS-REG-SYSIN = ALL "0"
+           PERFORM 3000-TERMINO
+           STOP RUN
+           .
+      *--------------------------------------------------------------*
+       1000-INICIALIZAR.
+           ACCEPT WS-HORARIO-INICIAL FROM TIME
+           MOVE 0 TO WS-CTLIDO
+                     WS-CTPROC
+           PERFORM 1500-LER-SYSIN
+           .
+      *--------------------------------------------------------------*
+       1500-LER-SYSIN.
+           ACCEPT WS-REG-SYSIN FROM SYSIN
+                  IF WS-REG-SYSIN NOT = ALL "0"
+                     COMPUTE WS-CTLIDO = WS-CTLIDO + 1
+                  END-IF
+           .
+      *--------------------------------------------------------------*
+       2000-PROCESSAR.
+           COMPUTE WS-VAL-PARC = ((WS-VAL-EMPRESTIMO * WS-JUROS) / 100)/
+                   (1 - 1 / (1 + WS-JUROS / 100) ** WS-QTD-PARCELAS)
+           COMPUTE WS-VAL-TOTAL = WS-VAL-PARC * WS-QTD-PARCELAS
+           MOVE WS-NUM-SIMULACAO           TO WS-NUM-SIMULACAO-F
+           MOVE WS-VAL-EMPRESTIMO          TO WS-VAL-EMPRESTIMO-F
+           MOVE WS-JUROS                   TO WS-JUROS-F
+           MOVE WS-QTD-PARCELAS            TO WS-QTD-PARCELAS-F
+           MOVE WS-VAL-PARC                TO WS-VAL-PARC-F
+           MOVE WS-VAL-TOTAL               TO WS-VAL-TOTAL-F
+           DISPLAY "**************************************************"
+              DISPLAY "NUMERO DA SIMULACAO.....: " WS-NUM-SIMULACAO-F
+              DISPLAY "VALOR DO EMPRESTIMO.....: R$" WS-VAL-EMPRESTIMO-F
+              DISPLAY "JUROS...................: " WS-JUROS-F "% A.M"
+              DISPLAY "QTDE. DE PARCELAS.......: " WS-QTD-PARCELAS-F
+              DISPLAY "VALOR DA PARCELA........: R$" WS-VAL-PARC-F
+              DISPLAY "VALOR TOTAL.............: R$" WS-VAL-TOTAL-F
+           DISPLAY "**************************************************"
+           COMPUTE WS-CTPROC = WS-CTPROC + 1
+           PERFORM 1500-LER-SYSIN
+           .
+      *
+       3000-TERMINO.
+           ACCEPT WS-HORARIO-FINAL FROM TIME
+           MOVE WS-CTLIDO                  TO WS-CTLIDO-F
+           MOVE WS-CTPROC                  TO WS-CTPROC-F
+      * FAZER OS CALCULOS DO TEMPO DE PROCESSAMENTO
+           COMPUTE WS-DIFERENCA = ( WS-HORA-F * 360000 +
+                                    WS-MIN-F  *   6000 +
+                                    WS-SEG-F  *    100 +
+                                    WS-CENT-F)         -
+                                  ( WS-HORA-I * 360000 +
+                                    WS-MIN-I  *   6000 +
+                                    WS-SEG-I  *    100 +
+                                    WS-CENT-I)
+      *
+           COMPUTE WS-HORA-P = WS-DIFERENCA / 360000
+           COMPUTE WS-DIFERENCA = WS-DIFERENCA - WS-HORA-P * 360000
+           COMPUTE WS-MIN-P = WS-DIFERENCA / 6000
+           COMPUTE WS-DIFERENCA = WS-DIFERENCA - WS-MIN-P * 6000
+           COMPUTE WS-SEG-P = WS-DIFERENCA / 100
+           COMPUTE WS-DIFERENCA = WS-DIFERENCA - WS-SEG-P * 100
+           COMPUTE WS-CENT-P = WS-DIFERENCA
+      * MOVER O TEMPO DE PROCESSAMNETO PARA AS VARIAVEIS FORMATADAS
+           MOVE WS-HORA-P                  TO WS-HORA-PF
+           MOVE WS-MIN-P                   TO WS-MIN-PF
+           MOVE WS-SEG-P                   TO WS-SEG-PF
+           MOVE WS-CENT-P                  TO WS-CENT-PF
+      *---------------------------------------------------------------*
+           DISPLAY "**************************************************"
+           DISPLAY "TOTAL DE SIMULACOES LIDAS........: " WS-CTLIDO-F
+           DISPLAY "TOTAL DE SIMULACOES PROCESSADAS..: " WS-CTPROC-F
+           DISPLAY "TEMPO TOTAL DE PROCESSAMENTO.....: "
+      -                                     WS-TEMPO-PROCESSAMENTO-F
+           DISPLAY "=================================================="
+           DISPLAY "==  TERMINO NORMAL DE PROCESSAMENTO DO GPXXN02  =="
+           DISPLAY "=================================================="
+           PERFORM 9000-IMPRIME-DATA
+           .
+      *---------------------------------------------------------------*
+       9000-IMPRIME-DATA.
+           ACCEPT WS-DATA-SISTEMA FROM DATE
+           ACCEPT WS-DATA-JUL FROM DAY
+           ACCEPT WS-DIA-SEMANA FROM DAY-OF-WEEK
+           MOVE CORR WS-DATA-SISTEMA       TO WS-DATA-SISTEMA-F
+      *
+      *    IDENTIFICAÁ„O DO MES DA DATA GREGORIANA
+           EVALUATE WS-MES OF WS-DATA-SISTEMA
+               WHEN 01 MOVE "JANEIRO"      TO WS-MES-EXT
+               WHEN 02 MOVE "FEVEREIRO"    TO WS-MES-EXT
+               WHEN 03 MOVE "MARCO"        TO WS-MES-EXT
+               WHEN 04 MOVE "ABRIL"        TO WS-MES-EXT
+               WHEN 05 MOVE "MAIO"         TO WS-MES-EXT
+               WHEN 06 MOVE "JUNHO"        TO WS-MES-EXT
+               WHEN 07 MOVE "JULHO"        TO WS-MES-EXT
+               WHEN 08 MOVE "AGOSTO"       TO WS-MES-EXT
+               WHEN 09 MOVE "SETEMBRO"     TO WS-MES-EXT
+               WHEN 10 MOVE "OUTUBRO"      TO WS-MES-EXT
+               WHEN 11 MOVE "NOVEMBRO"     TO WS-MES-EXT
+               WHEN 12 MOVE "DEZEMBRO"     TO WS-MES-EXT
+           END-EVALUATE
+      *
+      * IDENTIFICACAO DO DIA DA SEMANA POR ESTENSO
+           EVALUATE WS-DIA-SEMANA
+               WHEN 1 MOVE "SEGUNDA"       TO WS-DIA-SEMANA-F
+               WHEN 2 MOVE "TERCA"         TO WS-DIA-SEMANA-F
+               WHEN 3 MOVE "QUARTA"        TO WS-DIA-SEMANA-F
+               WHEN 4 MOVE "QUINTA"        TO WS-DIA-SEMANA-F
+               WHEN 5 MOVE "SEXTA"         TO WS-DIA-SEMANA-F
+               WHEN 6 MOVE "SABADO"        TO WS-DIA-SEMANA-F
+               WHEN 7 MOVE "DOMINGO"       TO WS-DIA-SEMANA-F
+           END-EVALUATE
+           DISPLAY "**************************************************"
+           DISPLAY "*  DATA GREGORIANA 1 - " WS-DATA-SISTEMA-F
+           DISPLAY "*  DATA GREGORIANA 2 - " WS-DIA OF
+                                             WS-DATA-SISTEMA
+                                             " DE "
+                                             WS-MES-EXT
+                                             " DE 20"
+                                             WS-ANO OF
+                                             WS-DATA-SISTEMA
+           DISPLAY "*  DATA JULIANA      - " WS-DIA-J
+                                             " DE 20"
+                                             WS-ANO-J
+           DISPLAY "*  DIA DA SEMANA     - " WS-DIA-SEMANA-F
+           DISPLAY "**************************************************"
+           .
